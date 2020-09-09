@@ -1,0 +1,15 @@
+{
+  "name": "gql",
+  "version": "1.0.0",
+  "description": "graphql training",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Horchani Walid",
+  "license": "ISC",
+  "dependencies": {
+    "graphql-yoga": "^1.14.10"
+  }
+}
