@@ -2,7 +2,7 @@ const { GraphQLServer } = require('graphql-yoga');
 const { randomBytes } = require('crypto');
 
 // fake data
-const users = [
+let users = [
   {
     id: '1',
     name: 'walid',
@@ -33,7 +33,7 @@ const users = [
   },
 ];
 
-const pts = [
+let pts = [
   {
     id: '1',
     title: 'good food',
@@ -57,7 +57,7 @@ const pts = [
   },
 ];
 
-const coms = [
+let coms = [
   { id: '1', content: 'my first comment', author: '2', post: '1' },
   { id: '2', content: 'my 2eme comment', author: '2', post: '1' },
   { id: '3', content: 'my troisieme comment', author: '1', post: '2' },
@@ -75,9 +75,29 @@ type Query {
   comments: [Comment]
 }
 type Mutation {
-  createUser(name: String!, email: String!, age: Int): User!
-  createPost(title: String!, body : String! , published: Boolean, author: ID!): Post!
-  createComment(content: String!, author: ID!, post: ID!) : Comment!
+  createUser(data: CreateUserInput): User!
+  deleteUser(id:ID!):User!
+  createPost(data: CreatePostInput): Post!
+  createComment(data: CreateCommentInput) : Comment!
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+  age: Int
+}
+
+input CreatePostInput {
+  title: String!
+  body : String!
+  published: Boolean
+  author: ID!
+}
+
+input CreateCommentInput {
+  content: String!
+  author: ID!
+  post: ID!
 }
 
 type Comment {
@@ -162,13 +182,13 @@ const resolvers = {
 
   Mutation: {
     createUser(parent, args, ctx, info) {
-      const emailTaken = users.some((user) => user.email === args.email);
+      const emailTaken = users.some((user) => user.email === args.data.email);
       if (emailTaken) {
         throw Error('email taken !');
       }
       const newUser = {
         id: randomBytes(4).toString('hex'),
-        ...args,
+        ...args.data,
       };
       users.push(newUser);
 
@@ -176,7 +196,7 @@ const resolvers = {
     },
     createPost(parent, args, ctx, info) {
       //check if user exist
-      const userExist = users.some((user) => user.id === args.author);
+      const userExist = users.some((user) => user.id === args.data.author);
       if (!userExist) {
         throw new Error('user not found !');
       }
@@ -184,12 +204,38 @@ const resolvers = {
       const post = {
         id: randomBytes(4).toString('hex'),
         ...args,
-        published: args.published || true,
+        published: args.data.published || true,
       };
 
       pts.push(post);
 
       return post;
+    },
+    deleteUser(parent, args, ctx, info) {
+      //get index of wanted user to delete it with splice methode
+      const indexUser = users.findIndex((user) => user.id === args.id);
+      // throw error if user nexist pas
+      if (indexUser === -1) {
+        throw new Error('user not found!');
+      }
+      // delete this user from array
+      const deletedUsers = users.splice(indexUser, 1);
+      console.log('user deleted!', deletedUsers);
+      console.log('users restants:::', users);
+
+      //delete tous les posts de ce user avec leurs commentaires
+      pts = pts.filter((post) => {
+        const match = post.author === args.id;
+        if (match) {
+          //if le post appartient au user to delete, delete comments de ce post
+          coms = coms.filter((comment) => comment.post !== post.id);
+        }
+        return !match;
+      });
+
+      coms = coms.filter((comment) => comment.author !== args.id);
+
+      return deletedUsers[0];
     },
     createComment(parent, args, ctx, info) {
       //le commentaire doit etre sur un post existant et publie, et le user doit etre existant le createur du comment
