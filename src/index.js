@@ -76,8 +76,8 @@ type Query {
 }
 type Mutation {
   createUser(name: String!, email: String!, age: Int): User!
-  createPost(title: String!, body : String! , published: Boolean, author: String): Post!
-  createComment(content: String!, author: String!, post: String!) : Comment!
+  createPost(title: String!, body : String! , published: Boolean, author: ID!): Post!
+  createComment(content: String!, author: ID!, post: ID!) : Comment!
 }
 
 type Comment {
@@ -168,10 +168,7 @@ const resolvers = {
       }
       const newUser = {
         id: randomBytes(4).toString('hex'),
-        name: args.name,
-        job: args.job,
-        address: args.adress,
-        email: args.email,
+        ...args,
       };
       users.push(newUser);
 
@@ -186,10 +183,8 @@ const resolvers = {
 
       const post = {
         id: randomBytes(4).toString('hex'),
-        title: args.title,
-        body: args.body,
+        ...args,
         published: args.published || true,
-        author: args.author,
       };
 
       pts.push(post);
@@ -210,9 +205,7 @@ const resolvers = {
 
       const comment = {
         id: randomBytes(4).toString('hex'),
-        content: args.content,
-        author: args.author,
-        post: args.post,
+        ...args,
       };
 
       coms.push(comment);
