@@ -77,6 +77,7 @@ type Query {
 type Mutation {
   createUser(name: String!, email: String!, age: Int): User!
   createPost(title: String!, body : String! , published: Boolean, author: String): Post!
+  createComment(content: String!, author: String!, post: String!) : Comment!
 }
 
 type Comment {
@@ -194,6 +195,29 @@ const resolvers = {
       pts.push(post);
 
       return post;
+    },
+    createComment(parent, args, ctx, info) {
+      //le commentaire doit etre sur un post existant et publie, et le user doit etre existant le createur du comment
+      const userExist = users.some((user) => user.id === args.author);
+      const postExistAndPublish = pts.some(
+        (post) => post.id === args.post && post.published
+      );
+      if (!userExist || !postExistAndPublish) {
+        throw new Error(
+          'user inexistant or post inexistant ou pas encore publier'
+        );
+      }
+
+      const comment = {
+        id: randomBytes(4).toString('hex'),
+        content: args.content,
+        author: args.author,
+        post: args.post,
+      };
+
+      coms.push(comment);
+
+      return comment;
     },
   },
 
