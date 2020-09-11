@@ -78,7 +78,9 @@ type Mutation {
   createUser(data: CreateUserInput): User!
   deleteUser(id:ID!):User!
   createPost(data: CreatePostInput): Post!
+  deletePost(id: ID!): Post!
   createComment(data: CreateCommentInput) : Comment!
+  deleteComment(id:ID!) : Comment!
 }
 
 input CreateUserInput {
@@ -194,23 +196,6 @@ const resolvers = {
 
       return newUser;
     },
-    createPost(parent, args, ctx, info) {
-      //check if user exist
-      const userExist = users.some((user) => user.id === args.data.author);
-      if (!userExist) {
-        throw new Error('user not found !');
-      }
-
-      const post = {
-        id: randomBytes(4).toString('hex'),
-        ...args,
-        published: args.data.published || true,
-      };
-
-      pts.push(post);
-
-      return post;
-    },
     deleteUser(parent, args, ctx, info) {
       //get index of wanted user to delete it with splice methode
       const indexUser = users.findIndex((user) => user.id === args.id);
@@ -237,6 +222,35 @@ const resolvers = {
 
       return deletedUsers[0];
     },
+    createPost(parent, args, ctx, info) {
+      //check if user exist
+      const userExist = users.some((user) => user.id === args.data.author);
+      if (!userExist) {
+        throw new Error('user not found !');
+      }
+
+      const post = {
+        id: randomBytes(4).toString('hex'),
+        ...args,
+        published: args.data.published || true,
+      };
+
+      pts.push(post);
+
+      return post;
+    },
+    deletePost(parent, args, ctx, info) {
+      //delete post the delete all comments belong to this post
+      const indexPost = pts.findIndex((post) => post.id === args.id);
+      if (indexPost === -1) {
+        throw new Error('post not found !');
+      }
+      const postDeleted = pts.splice(indexPost, 1);
+      //delete comments appartient a ce post
+      coms = coms.filter((comment) => comment.post !== args.id);
+
+      return postDeleted[0];
+    },
     createComment(parent, args, ctx, info) {
       //le commentaire doit etre sur un post existant et publie, et le user doit etre existant le createur du comment
       const userExist = users.some((user) => user.id === args.author);
@@ -257,6 +271,15 @@ const resolvers = {
       coms.push(comment);
 
       return comment;
+    },
+    deleteComment(parent, args, ctx, info) {
+      const indexComment = coms.findIndex((comment) => comment.id === args.id);
+      if (indexComment === -1) {
+        throw new Error('comment not found !');
+      }
+      comDeleted = coms.splice(indexComment, 1);
+
+      return comDeleted[0];
     },
   },
 
