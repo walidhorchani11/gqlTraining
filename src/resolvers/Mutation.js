@@ -67,24 +67,28 @@ const Mutation = {
 
     return postDeleted[0];
   },
-  createComment(parent, args, { db }, info) {
+  createComment(parent, args, { db, pubsub }, info) {
     //le commentaire doit etre sur un post existant et publie, et le user doit etre existant le createur du comment
-    const userExist = db.users.some((user) => user.id === args.author);
+    const userExist = db.users.some((user) => user.id === args.data.author);
     const postExistAndPublish = db.pts.some(
-      (post) => post.id === args.post && post.published
+      (post) => post.id === args.data.post && post.published
     );
-    if (!userExist || !postExistAndPublish) {
-      throw new Error(
-        'user inexistant or post inexistant ou pas encore publier'
-      );
+
+    if (!userExist) {
+      throw new Error('user inexistant');
+    }
+    if (!postExistAndPublish) {
+      throw new Error('post inexistant ou pas encore publier');
     }
 
     const comment = {
       id: randomBytes(4).toString('hex'),
-      ...args,
+      ...args.data,
     };
+    //call publish here to publie data on concerned chanel
 
     db.coms.push(comment);
+    pubsub.publish(`comment ${args.data.post}`, { comment });
 
     return comment;
   },
