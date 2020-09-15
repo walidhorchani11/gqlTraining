@@ -38,7 +38,7 @@ const Mutation = {
 
     return deletedUsers[0];
   },
-  createPost(parent, args, { db }, info) {
+  createPost(parent, args, { db, pubsub }, info) {
     //check if user exist
     const userExist = db.users.some((user) => user.id === args.data.author);
     if (!userExist) {
@@ -47,25 +47,43 @@ const Mutation = {
 
     const post = {
       id: randomBytes(4).toString('hex'),
-      ...args,
-      published: args.data.published || true,
+      ...args.data,
     };
 
+    console.log('post created :', post);
+
     db.pts.push(post);
+    //publish new post to our chanel here
+    if (post.published) {
+      pubsub.publish('post', {
+        post: {
+          mutation: 'CREATED',
+          data: post,
+        },
+      });
+    }
 
     return post;
   },
-  deletePost(parent, args, { db }, info) {
+  deletePost(parent, args, { db, pubsub }, info) {
     //delete post the delete all comments belong to this post
     const indexPost = db.pts.findIndex((post) => post.id === args.id);
     if (indexPost === -1) {
       throw new Error('post not found !');
     }
-    const postDeleted = db.pts.splice(indexPost, 1);
+    const [post] = db.pts.splice(indexPost, 1);
     //delete comments appartient a ce post
     db.coms = db.coms.filter((comment) => comment.post !== args.id);
+    if (post.published) {
+      pubsub.publish('post', {
+        post: {
+          mutation: 'DELETED',
+          data: post,
+        },
+      });
+    }
 
-    return postDeleted[0];
+    return post;
   },
   createComment(parent, args, { db, pubsub }, info) {
     //le commentaire doit etre sur un post existant et publie, et le user doit etre existant le createur du comment
@@ -101,5 +119,9 @@ const Mutation = {
 
     return comDeleted[0];
   },
+
+  //pour les mutation update :
+  // au niveau du subscription, on test si update a modifier le champs published to false , alors mutation sera 'DELETED' , au cas contraire c'est avec mutation 'CREATED'
+  // todo
 };
 module.exports = Mutation;
